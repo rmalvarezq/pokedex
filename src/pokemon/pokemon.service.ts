@@ -9,16 +9,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { Pokemon } from './entities/pokemon.entity';
 
+import { ConfigService } from '@nestjs/config';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreatePokemonDto } from './dto/create-pokemon.dto';
 import { UpdatePokemonDto } from './dto/update-pokemon.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class PokemonService {
+  private defaultLimit: number;
   constructor(
     @InjectModel(Pokemon.name)
     private readonly pokemonModel: Model<Pokemon>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.defaultLimit = configService.get<number>('defaultLimit ');
+  }
 
   async create(createPokemonDto: CreatePokemonDto) {
     createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase();
@@ -32,10 +37,15 @@ export class PokemonService {
   }
 
   async findAll(@Query() paginationDto: PaginationDto) {
-    const { limit = 10, offset = 0 } = paginationDto;
-    return this.pokemonModel.find().limit(limit).skip(offset).sort({
-      no: 1, //ordena de manera ascendente
-    }).select('-__v'); //se quita una fila que tenga ese nombre
+    const { limit = this.defaultLimit, offset = 0 } = paginationDto;
+    return this.pokemonModel
+      .find()
+      .limit(limit)
+      .skip(offset)
+      .sort({
+        no: 1, //ordena de manera ascendente
+      })
+      .select('-__v'); //se quita una fila que tenga ese nombre
   }
 
   async findOne(term: string) {
